@@ -33,6 +33,7 @@ import {
   getTweetsAndRepliesByUserId,
   getTweetsAndReplies,
   fetchLikedTweets,
+  getTweetWithReplies,
 } from './tweets';
 import fetch from 'cross-fetch';
 import { RateLimitStrategy } from './rate-limit';
@@ -315,6 +316,10 @@ export class Scraper {
    */
   public getTweets(user: string, maxTweets = 200): AsyncGenerator<Tweet> {
     return getTweets(user, maxTweets, this.auth);
+  }
+
+  public getTweetWithReplies(tweetId: string): Promise<Tweet[]> {
+    return getTweetWithReplies(tweetId, this.auth);
   }
 
   /**
