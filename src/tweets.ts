@@ -391,6 +391,30 @@ export async function getTweet(
   return tweets.find((tweet) => tweet.id === id) ?? null;
 }
 
+export async function getTweetWithReplies(
+  id: string,
+  auth: TwitterAuth,
+): Promise<Tweet[]> {
+  const tweetDetailRequest = apiRequestFactory.createTweetDetailRequest();
+  tweetDetailRequest.variables.focalTweetId = id;
+
+  const res = await requestApi<ThreadedConversation>(
+    tweetDetailRequest.toRequestUrl(),
+    auth,
+  );
+
+  if (!res.success) {
+    throw res.err;
+  }
+
+  if (!res.value) {
+    return [];
+  }
+
+  const tweets = parseThreadedConversation(res.value);
+  return tweets;
+}
+
 export async function getTweetAnonymous(
   id: string,
   auth: TwitterAuth,
