@@ -2163,7 +2163,11 @@ async function fetchTweetsAndReplies(userId, maxTweets, cursor, auth) {
   }
   const res = await requestApi(
     userTweetsRequest.toRequestUrl(),
-    auth
+    auth,
+    "GET",
+    void 0,
+    void 0,
+    bearerToken2
   );
   if (!res.success) {
     throw res.err;
@@ -2182,7 +2186,11 @@ async function fetchListTweets(listId, maxTweets, cursor, auth) {
   }
   const res = await requestApi(
     listTweetsRequest.toRequestUrl(),
-    auth
+    auth,
+    "GET",
+    void 0,
+    void 0,
+    bearerToken2
   );
   if (!res.success) {
     throw res.err;
@@ -2237,7 +2245,11 @@ async function fetchLikedTweets(userId, maxTweets, cursor, auth) {
   }
   const res = await requestApi(
     userTweetsRequest.toRequestUrl(),
-    auth
+    auth,
+    "GET",
+    void 0,
+    void 0,
+    bearerToken2
   );
   if (!res.success) {
     throw res.err;
