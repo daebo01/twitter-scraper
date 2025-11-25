@@ -734,33 +734,24 @@ class TwitterUserAuth extends TwitterGuestAuth {
     };
     log(`Starting login flow for user: ${username}`);
     let next = await this.initLogin();
-    let stepCount = 0;
     while (next.status === "success" && next.response.subtasks?.length) {
-      stepCount++;
       const flowToken = next.response.flow_token;
       if (flowToken == null) {
         throw new Error("flow_token not found.");
       }
       const subtaskId = next.response.subtasks[0].subtask_id;
-      log(`Step ${stepCount}: Processing subtask "${subtaskId}"`);
-      log(`  Full subtask data: ${JSON.stringify(next.response.subtasks[0], null, 2)}`);
+      log(`Processing subtask: ${subtaskId}`);
       const handler = this.subtaskHandlers.get(subtaskId);
       if (handler) {
         next = await handler(subtaskId, next.response, credentials, {
           sendFlowRequest: this.executeFlowTask.bind(this),
           getFlowToken: () => flowToken
         });
-        log(`  Result status: ${next.status}`);
-        if (next.status === "success") {
-          log(`  Next subtasks: ${next.response.subtasks?.map((s) => s.subtask_id).join(", ") || "none"}`);
-        } else {
-          log(`  Error: ${next.err.message}`);
-        }
       } else {
         throw new Error(`Unknown subtask ${subtaskId}`);
       }
     }
-    log(`Login flow completed after ${stepCount} steps. Final status: ${next.status}`);
+    log(`Login flow completed with status: ${next.status}`);
     if (next.status === "error") {
       throw next.err;
     }
@@ -994,9 +985,20 @@ class TwitterUserAuth extends TwitterGuestAuth {
       ]
     });
   }
+  /**
+   * Handles the LoginSuccessSubtask which indicates successful authentication.
+   *
+   * IMPORTANT: As of November 2025, Twitter's API behavior changed. Previously,
+   * after receiving LoginSuccessSubtask, the library would make one more API call
+   * with empty subtask_inputs. Twitter now returns a 401 "Could not authenticate you"
+   * error for this final call, even though the session is already valid.
+   *
+   * The fix: Skip the final API call entirely. By the time LoginSuccessSubtask is
+   * received, the ct0 cookie (CSRF token) is already set and the session is fully
+   * established. We simply return success and clear the subtasks array to exit
+   * the login loop.
+   */
   async handleSuccessSubtask(_subtaskId, prev, _credentials, _api) {
-    log("LoginSuccessSubtask received - login already complete, skipping final API call");
-    log(`User info: ${JSON.stringify(prev.subtasks?.[0])}`);
     return {
       status: "success",
       response: {
@@ -1011,7 +1013,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
     if ("flow_name" in data) {
       onboardingTaskUrl = `https://api.x.com/1.1/onboarding/task.json?flow_name=${data.flow_name}`;
     }
-    log(`Making POST request to ${onboardingTaskUrl}`);
+    log(`POST ${onboardingTaskUrl}`);
     const headers = new headersPolyfill.Headers({
       accept: "*/*",
       "accept-language": "en-US,en;q=0.9",
@@ -1065,7 +1067,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
       }
       await updateCookieJar(this.jar, res.headers);
       if (res.status === 429) {
-        log("Rate limit hit, waiting before retrying...");
+        log("Rate limited, retrying...");
         await this.onRateLimit({
           fetchParameters,
           response: res
@@ -1099,7 +1101,6 @@ class TwitterUserAuth extends TwitterGuestAuth {
     const subtask = flow.subtasks?.length ? flow.subtasks[0] : void 0;
     value.Check(TwitterUserAuthSubtask, subtask);
     if (subtask && subtask.subtask_id === "DenyLoginSubtask") {
-      log(`DenyLoginSubtask received. Full flow response: ${JSON.stringify(flow, null, 2)}`);
       return {
         status: "error",
         err: new AuthenticationError("Authentication error: DenyLoginSubtask")
