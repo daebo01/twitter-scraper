@@ -2316,6 +2316,26 @@ async function getTweet(id, auth) {
   const tweets = parseThreadedConversation(res.value);
   return tweets.find((tweet) => tweet.id === id) ?? null;
 }
+async function getTweetWithReplies(id, auth) {
+  const tweetDetailRequest = apiRequestFactory.createTweetDetailRequest();
+  tweetDetailRequest.variables.focalTweetId = id;
+  const res = await requestApi(
+    tweetDetailRequest.toRequestUrl(),
+    auth,
+    "GET",
+    void 0,
+    void 0,
+    bearerToken2
+  );
+  if (!res.success) {
+    throw res.err;
+  }
+  if (!res.value) {
+    return [];
+  }
+  const tweets = parseThreadedConversation(res.value);
+  return tweets;
+}
 async function getTweetAnonymous(id, auth) {
   const tweetResultByRestIdRequest = apiRequestFactory.createTweetResultByRestIdRequest();
   tweetResultByRestIdRequest.variables.tweetId = id;
@@ -2653,6 +2673,9 @@ class Scraper {
    */
   getTweets(user, maxTweets = 200) {
     return getTweets(user, maxTweets, this.auth);
+  }
+  getTweetWithReplies(tweetId) {
+    return getTweetWithReplies(tweetId, this.auth);
   }
   /**
    * Fetches liked tweets from a Twitter user. Requires authentication.

@@ -841,6 +841,7 @@ declare class Scraper {
      * @returns An {@link AsyncGenerator} of tweets from the provided user.
      */
     getTweets(user: string, maxTweets?: number): AsyncGenerator<Tweet>;
+    getTweetWithReplies(tweetId: string): Promise<Tweet[]>;
     /**
      * Fetches liked tweets from a Twitter user. Requires authentication.
      * @param user The user whose likes should be returned.
